@@ -1,8 +1,3 @@
-var isSigningUp = false;
-var signedUpUser = "";
-
-
-
 function getCurrentTabUrl(callback) {
   // Query filter to be passed to chrome.tabs.query - see
   // https://developer.chrome.com/extensions/tabs#method-query
@@ -36,11 +31,6 @@ function getCurrentTabUrl(callback) {
 
 }
 
-
-
-
-
-
 function closeAll() {
   for(var i=0; i<document.getElementsByClassName('input').length; i++){
     document.getElementsByClassName('input')[i].style.display = 'none';
@@ -48,16 +38,45 @@ function closeAll() {
 }
 
 
-
-
-
-
 function buildDialog(title, message, button) {
   console.log(title+" - "+message);
 }
 
 
+function buildUI(url, title){
+    document.getElementById('title').innerHTML = title;
+    document.getElementById('url').innerHTML = "<a href='" + url + "'>" + url + "</a>";
+
+    var titlePage = document.getElementsByClassName('title-page')[0];
+
+    document.getElementById('signupBtn1').addEventListener('click', function() {
+      closeAll();
+      document.getElementById('signup').style.display = 'block';
+    });
+
+    document.getElementById('loginBtn2').addEventListener('click', function() {
+      loginBtnPressed();
+    });
+
+    document.getElementById('forgotBtn').addEventListener('click', function() {
+      closeAll();
+      document.getElementById('forgot').style.display = 'block';
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+      closeAll();
+      document.getElementById('login').style.display = 'block';
+    });
+
+    document.getElementById('signupBtn3').addEventListener('click', function() {
+      closeAll();
+      document.getElementById('signup').style.display = 'block';
+    });
+}
+
+
 function updateSessionState(){
+/*
   firebase.auth().onAuthStateChanged(function(user) {
       if (user) {
         if(isSigningUp) {
@@ -85,99 +104,42 @@ function updateSessionState(){
         console.log('Not Logged In')
       }
     });
+*/
+}
+
+
+function loginBtnPressed(){
+  closeAll();
+  document.getElementById('login').style.display = 'block';
+}
+
+function loginSetup(){
+  document.getElementById('loginBtn1').addEventListener('click', function() {
+      var username = document.getElementById('username1').value;
+      var password = document.getElementById('password1').value;
+
+      if(email != "" && password != ""){
+
+        Parse.User.logIn(username, password, {
+          success: function(user) {
+            updateSessionState();
+          },
+          error: function(user, error) {
+            buildDialog("Login Failed", "Error: " + error.code + " " + error.message, "Try Again");
+          }
+        });
+        
+      } else {
+        buildDialog("Login Failed", "Please fill all fields.", "Try Again")
+      }
+    });
 }
 
 
 
 
-
-
-document.addEventListener('DOMContentLoaded', function() {
-  getCurrentTabUrl(function(url, title) {
-    
-
-    /*
-      
-        Firebase Configuration
-
-    */
-    var config = {
-            apiKey: "AIzaSyBcSBuzH1-kHTijWwO2K3KdJ1GPTRYNhIw",
-            authDomain: "project-5397732214719422155.firebaseapp.com",
-            databaseURL: "https://project-5397732214719422155.firebaseio.com",
-            storageBucket: "",
-        };
-    firebase.initializeApp(config);
-
-
-    /*
-
-      UI Code
-
-    */
-
-    document.getElementById('title').innerHTML = title;
-    document.getElementById('url').innerHTML = "<a href='" + url + "'>" + url + "</a>";
-
-    var titlePage = document.getElementsByClassName('title-page')[0];
-
-    document.getElementById('signupBtn1').addEventListener('click', function() {
-      closeAll();
-      document.getElementById('signup').style.display = 'block';
-    });
-
-    document.getElementById('loginBtn2').addEventListener('click', function() {
-      closeAll();
-      document.getElementById('login').style.display = 'block';
-    });
-
-    document.getElementById('forgotBtn').addEventListener('click', function() {
-      closeAll();
-      document.getElementById('forgot').style.display = 'block';
-    });
-
-    document.getElementById('cancelBtn').addEventListener('click', function() {
-      closeAll();
-      document.getElementById('login').style.display = 'block';
-    });
-
-    document.getElementById('signupBtn3').addEventListener('click', function() {
-      closeAll();
-      document.getElementById('signup').style.display = 'block';
-    });
-
-
-
-
-
-
-    /*
-        
-        Login, Signup, Forgot Buttons
-
-    */
-
-    document.getElementById('loginBtn1').addEventListener('click', function() {
-      var email = document.getElementById('email1').value;
-      var password = document.getElementById('password1').value;
-
-      if(email != "" && password != ""){
-        firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
-          var errorCode = error.code;
-          var errorMessage = error.message;
-              
-          buildDialog("Login Failed", "Error [" + errorCode + "]: " + errorMessage, "Try Again");
-          updateSessionState();
-        });
-      } else {
-        buildDialog("Login Failed", "Please fill all fields.", "Try Again")
-      }
-    });
-
-
-
-
-    document.getElementById('signupBtn2').addEventListener('click', function() {
+function signupSetup(){
+  document.getElementById('signupBtn2').addEventListener('click', function() {
       var username = document.getElementById('username').value;
       var email = document.getElementById('email2').value;
       var password = document.getElementById('password2').value;
@@ -190,17 +152,21 @@ document.addEventListener('DOMContentLoaded', function() {
           if(password != confirm) {
             buildDialog("Sign Up Failed", "Passwords do not match.", "Try Again");
           } else {
-            isSigningUp = true;
-            signedUpUser = username;
+            
+            var user = new Parse.User();
+            user.set("username", username);
+            user.set("email", email);
+            user.set("password", password);
 
-            firebase.auth().createUserWithEmailAndPassword(email, password).catch(function(error) {
-              var errorCode = error.code;
-              var errorMessage = error.message;
-              
-              buildDialog("Sign Up Failed", "Error [" + errorCode + "]: " + errorMessage, "Try Again");
-
-              updateSessionState();
-
+            user.signUp(null, {
+              success: function(user) {
+                loginBtnPressed();
+                updateSessionState()
+              },
+              error: function(user, error) {
+                // Show the error message somewhere and let the user try again.
+                buildDialog("Sign Up Failed", "Error: " + error.code + " " + error.message, "Try Again");
+              }
             });
 
           }
@@ -209,22 +175,37 @@ document.addEventListener('DOMContentLoaded', function() {
         buildDialog("Sign Up Failed", "Please fill all fields.", "Try Again");
       }
 
-    });
+  });
+}
 
 
-
-
-
-
-
-    document.getElementById('resetBtn').addEventListener('click', function() {
+function resetSetup(){
+  document.getElementById('resetBtn').addEventListener('click', function() {
       
-    });
+  });
+}
 
 
+
+document.addEventListener('DOMContentLoaded', function() {
+  getCurrentTabUrl(function(url, title) {
+    
+    buildUI(url, title);
+
+    loginSetup();
+
+    signupSetup();
+
+    resetSetup();
+
+  
+
+    Parse.initialize("YOUR_APP_ID");
+    Parse.serverURL = 'http://YOUR_PARSE_SERVER:1337/parse'
 
 
     updateSessionState()
+
 
   });
 });
