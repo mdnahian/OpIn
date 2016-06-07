@@ -1,3 +1,6 @@
+var pageURL = "";
+var pageTitle = "";
+
 function getCurrentTabUrl(callback) {
   // Query filter to be passed to chrome.tabs.query - see
   // https://developer.chrome.com/extensions/tabs#method-query
@@ -28,7 +31,6 @@ function getCurrentTabUrl(callback) {
 
     callback(url, title);
   });
-
 }
 
 function closeAll() {
@@ -37,15 +39,13 @@ function closeAll() {
   }
 }
 
-
 function buildDialog(title, message, button) {
   console.log(title+" - "+message);
 }
 
-
-function buildUI(url, title){
-    document.getElementById('title').innerHTML = title;
-    document.getElementById('url').innerHTML = "<a href='" + url + "'>" + url + "</a>";
+function buildUI(){
+    document.getElementById('title').innerHTML = pageTitle;
+    document.getElementById('url').innerHTML = "<a href='" + pageURL + "'>" + pageURL + "</a>";
 
     var titlePage = document.getElementsByClassName('title-page')[0];
 
@@ -74,37 +74,65 @@ function buildUI(url, title){
     });
 }
 
-
 function updateSessionState(){
-/*
-  firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
-        if(isSigningUp) {
-          user.updateProfile({
-            displayName: signedUpUser
-          }).then(function() {
-            console.log('Account Created Successfuly');
-            isSigningUp = false;
-            signedUpUser = "";
-          }, function(error) {
-            console.log('There was an error creating the account');
-          });
-        }
+  var currentUser = Parse.User.current();
+  if (currentUser) {
+      closeAll();
+      document.getElementById('comment-input').style.display = 'block';
+      commentSetup();
+      hideLoading();
+  } else {
+      loginBtnPressed();
+      hideLoading();
+  }
+}
 
-        document.getElementById('comment-input').style.display = 'block';
-        document.getElementById('login').style.display = 'none';
-        document.getElementById('signup').style.display = 'none';
 
-        console.log('Logged In');
-      } else {
-        document.getElementById('comment-input').style.display = 'none';
-        document.getElementById('signup').style.display = 'none';
-        document.getElementById('login').style.display = 'block';
-
-        console.log('Not Logged In')
-      }
+function commentSetup(){
+  document.getElementById('welcome').innerHTML = "Hi, " + Parse.User.current().get("username") + "! &nbsp; <small><a id='signoutBtn'>Sign Out</a></small>";
+  
+  document.getElementById('signoutBtn').addEventListener('click', function(){
+    showLoading();
+    Parse.User.logOut().then(() => {
+      var currentUser = Parse.User.current();
+      updateSessionState();
     });
-*/
+  });
+
+  document.getElementById('postBtn').addEventListener('click', function(){
+    showLoading();
+    var input = document.getElementById('cinput').value;
+
+    if(input != ""){
+      var Comment = Parse.Object.extend("Comment");
+      var comment = new Comment();
+      comment.set("title", pageTitle);
+      comment.set("url", pageURL);
+      comment.set("username", Parse.User.current().get("username"));
+      comment.set("content", input);
+      comment.set("likes", 0);
+
+      comment.save(null, {
+        success: function(comment) {
+          document.getElementById('cinput').value = "";
+          document.getElementById('cinput').innerHTML = "";
+          hideLoading();
+          loadComments();
+        },
+        error: function(comment, error) {
+          hideLoading();
+          buildDialog("Failed to Post Comment", "Error: " + error.message, "Try Again");
+        }
+      });
+
+    } else {
+      hideLoading();
+      buildDialog("Failed to Post Comment", "Please fill all fields.", "Try Again");
+    }
+  });
+
+
+
 }
 
 
@@ -115,21 +143,24 @@ function loginBtnPressed(){
 
 function loginSetup(){
   document.getElementById('loginBtn1').addEventListener('click', function() {
+    showLoading();
       var username = document.getElementById('username1').value;
       var password = document.getElementById('password1').value;
 
-      if(email != "" && password != ""){
+      if(username != "" && password != ""){
 
         Parse.User.logIn(username, password, {
           success: function(user) {
             updateSessionState();
           },
           error: function(user, error) {
+            hideLoading();
             buildDialog("Login Failed", "Error: " + error.code + " " + error.message, "Try Again");
           }
         });
-        
+
       } else {
+        hideLoading();
         buildDialog("Login Failed", "Please fill all fields.", "Try Again")
       }
     });
@@ -140,6 +171,7 @@ function loginSetup(){
 
 function signupSetup(){
   document.getElementById('signupBtn2').addEventListener('click', function() {
+    showLoading();
       var username = document.getElementById('username').value;
       var email = document.getElementById('email2').value;
       var password = document.getElementById('password2').value;
@@ -147,9 +179,11 @@ function signupSetup(){
 
       if(username != "" && email != "" && password != "" && confirm != ""){
         if(username.length < 5 || username.length > 16) {
+          hideLoading();
           buildDialog("Sign Up Failed", "Username must be between 5 and 16 characters long.", "Try Again");
         } else {
           if(password != confirm) {
+            hideLoading();
             buildDialog("Sign Up Failed", "Passwords do not match.", "Try Again");
           } else {
             
@@ -161,10 +195,10 @@ function signupSetup(){
             user.signUp(null, {
               success: function(user) {
                 loginBtnPressed();
-                updateSessionState()
+                updateSessionState();
               },
               error: function(user, error) {
-                // Show the error message somewhere and let the user try again.
+                hideLoading();
                 buildDialog("Sign Up Failed", "Error: " + error.code + " " + error.message, "Try Again");
               }
             });
@@ -172,6 +206,7 @@ function signupSetup(){
           }
         }
       } else {
+        hideLoading();
         buildDialog("Sign Up Failed", "Please fill all fields.", "Try Again");
       }
 
@@ -187,10 +222,66 @@ function resetSetup(){
 
 
 
+
+function loadComments(){
+  showLoading();
+
+  var Comment = Parse.Object.extend("Comment");
+  var query = new Parse.Query(Comment);
+  query.equalTo("title", pageTitle);
+  query.equalTo("url", pageURL);
+
+  query.find({
+    success: function(results) {
+      var numComments = "<h5>" + results.length + " Comments</h5>";
+
+      var comments = "";
+
+      for (var i = 0; i < results.length; i++) {
+        var object = results[i];
+        comments = comments + "<div class='comment'> <div class='username'>" + object.get("username") + "</div> <div class='content'>" + object.get("content") + "</div> <div class='like'>" + object.get("likes") + " <a id='likeBtn' data-id='" + object.id + "'><img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+      }
+
+      document.getElementById("comments").innerHTML = numComments + comments;
+
+      hideLoading();
+    },
+    error: function(error) {
+      console.log("Error: " + error.code + " " + error.message);
+      hideLoading();
+    }
+  });
+}
+
+
+
+
+function showLoading(){
+  document.getElementById('loading').style.display = 'block';
+}
+
+function hideLoading(){
+  document.getElementById('loading').style.display = 'none';
+}
+
+
+
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
   getCurrentTabUrl(function(url, title) {
     
-    buildUI(url, title);
+    /*
+      Configure Parse
+    */
+    Parse.initialize("opin_chrome_ext");
+    Parse.serverURL = 'http://parseserver-8qx6b-env.us-west-2.elasticbeanstalk.com/parse'
+
+    pageURL = url;
+    pageTitle = title;
+
+    buildUI();
 
     loginSetup();
 
@@ -198,13 +289,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     resetSetup();
 
-  
+    updateSessionState();
 
-    Parse.initialize("YOUR_APP_ID");
-    Parse.serverURL = 'http://YOUR_PARSE_SERVER:1337/parse'
-
-
-    updateSessionState()
+    loadComments();
 
 
   });

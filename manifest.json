@@ -4,7 +4,7 @@
   "name": "OpIn",
   "description": "Comment on any post or article on any website.",
   "version": "1.0",
-  "content_security_policy": "script-src 'self' https://cdn.firebase.com https://www.gstatic.com https://*.firebaseio.com; object-src 'self'",
+  // "content_security_policy": "script-src 'self' www.parsecdn.com; object-src 'self'",
 
   "browser_action": {
     "default_icon": "icon.png",
