@@ -37,6 +37,11 @@
 				margin-bottom:10px;
 			}
 
+			.input h5 {
+				margin:0;
+				margin-bottom:5px;
+			}
+
 			.webBtn {
 				text-decoration: none;
 				color:#ffffff;
@@ -46,6 +51,11 @@
 				padding-right:10px;
 				border-radius:2px;
 				font-weight:bold;
+				cursor:pointer;
+			}
+
+			a, a:visited {
+				cursor:pointer;
 			}
 
 			.comment {
@@ -77,8 +87,7 @@
 				margin-top:5px;
 			}
 		</style>
-
-		<script src="firebase.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/live/3.0/firebase.js"></script>
 	</head>
 
 	<body>
@@ -86,7 +95,7 @@
 		<div class="container">
 
 			<div style="float:left; display:inline;"><img src="icon.png" alt="OpIn" style="height:25px; margin-right:5px;"></div>
-			<div style="display:inline; font-size:20px; position:relative; top:-5px;"><strong>OpIn</strong> - Comment on Any Website</div>
+			<div style="display:inline; font-size:20px; position:relative; top:-5px;"><strong>OpIn</strong></div>
 			
 
 			<div class="title-page">
@@ -102,6 +111,7 @@
 			</div>
 
 			<div id="login" class="input">
+				<h5>Login to Comment</h5>
 				<input id="email1" type="email" placeholder="email"><br>
 				<input id="password1" type="password" placeholder="password"><br>
 				<a id="loginBtn1" class="webBtn" style="margin-top:25px;">Login</a>
@@ -110,6 +120,7 @@
 			</div>
 
 			<div id="signup" class="input">
+				<h5>Create Account</h5>
 				<input id="username" type="username" placeholder="username"><br>
 				<input id="email2" type="email" placeholder="email"><br>
 				<input id="password2" type="password" placeholder="password"><br>
@@ -118,24 +129,30 @@
 				&middot; <a id="loginBtn2">Already have an account?</a>
 			</div>
 
+			<div id="forgot" class="input">
+				<h5>Forgot Password</h5>
+				<input id="email3" type="email" placeholder="email"><br>
+				<a id="resetBtn" class="webBtn" style="margin-top:25px;">Email Reset Link</a>
+				&middot; <a id="cancelBtn">Cancel</a>
+				&middot; <a id="signupBtn3">Create Account</a>
+			</div>
+
 			<div class="comments">
-				<div class="comment">
+				<!-- <div class="comment">
 					<div class="username">mdni007</div>
 					<div class="content">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
 					<div class="like">12 <a id="likeBtn" data-id="1ce6w0rf5"><img src="like.png" alt="like comment"></a></div>
 					<div class="datetime">Jun 1, 2016 9:59am</div>
-				</div>
+				</div> -->
 			</div>
 
-			<div id="loadBtn" class="load-more" style="text-align:center; background-color:#999999; color:#ffffff; font-size:20px; font-weight:bold; padding:5px; padding-bottom:10px;">
+			<!-- <div id="loadBtn" class="load-more" style="text-align:center; background-color:#999999; color:#ffffff; font-size:20px; font-weight:bold; padding:5px; padding-bottom:10px;">
 				Load More
-			</div>
+			</div> -->
 
 		</div>
 
 
-
-		
 		<script src="comments.js"></script>
 	</body>
 </html>
