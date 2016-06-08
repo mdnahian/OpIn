@@ -6,6 +6,9 @@
 			body {
 				font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
         		font-size: 100%;
+        		overflow:hidden;
+        		overflow-y:auto;
+        		height:100%;
 			}
 
 			.container {
@@ -64,6 +67,18 @@
 				border-bottom:1px #999999 solid;
 			}
 
+			.comments h5 {
+				margin:0;
+				margin-top:5px;
+				margin-bottom:5px;
+			}
+
+			#holder {
+				max-height:300px; 
+				overflow:hidden;
+				overflow-y:auto;
+			}
+
 			.username {
 				font-weight:bold;
 			}
@@ -104,6 +119,48 @@
 				background-color:#ffffff;
 				z-index:9999;
 			}
+
+			.shadow {
+			  -moz-box-shadow:    2px 2px 1px #999;
+			  -webkit-box-shadow: 2px 2px 1px #999;
+			  box-shadow:         2px 2px 1px #999;
+			}
+
+			#dialog {
+				display: none;
+				position: absolute;
+				left:0;
+				right:0;
+				top:0;
+				bottom:0;
+				background-color: rgb(255, 255, 255);
+			    background-color: rgba(255, 255, 255, 0.6);
+				z-index:9999;
+			}
+
+			#dialog-box {
+				margin:25px;
+				background-color:#ffffff;
+				padding:10px;
+				border:1px #999 solid;
+			}
+
+			#dialog-box hr {
+				background-color: #eeeeee;
+				border: 0;
+				height:3px;
+			}
+
+			#dtitle {
+				font-weight:bold;
+				margin-bottom:5px;
+			}
+
+			#closeBtn {
+				float:right;
+			}
+
+
 		</style>
 		<script src="parse.js"></script>
 	</head>
@@ -119,6 +176,16 @@
 
 				<div id="loading">
 					<center><img src="loading.gif" alt="loading..."></center>
+				</div>
+
+				<div id="dialog">
+					<div id="dialog-box" class="shadow">
+						<div id="dtitle">Something Went Wrong :(</div>
+						<div id="dmessage">This shouldn't be happening. Luckily, an error report has been sent. We will fix this issue immediately.</div>
+						<hr>
+						<a>&nbsp;</a>
+						<a id="closeBtn">Close</a>
+					</div>
 				</div>
 
 
@@ -164,7 +231,7 @@
 
 				<div id="comments" class="comments"></div>
 
-				<!-- <div id="loadBtn" class="load-more" style="text-align:center; background-color:#999999; color:#ffffff; font-size:20px; font-weight:bold; padding:5px; padding-bottom:10px;">
+				<!-- <div id="loadBtn" class="load-more" style="text-align:center; background-color:#999999; color:#ffffff; font-size:20px; font-weight:bold; padding:5px; padding-bottom:10px; cursor:pointer;">
 					Load More
 				</div> -->
 

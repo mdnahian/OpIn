@@ -40,12 +40,21 @@ function closeAll() {
 }
 
 function buildDialog(title, message, button) {
-  console.log(title+" - "+message);
+  document.getElementById('dtitle').innerHTML = title;
+  document.getElementById('dmessage').innerHTML = message;
+  document.getElementById('closeBtn').innerHTML = button;
+
+  document.getElementById('closeBtn').addEventListener('click', function(){
+    document.getElementById('dialog').style.display = 'none';
+  });
+  
+  document.getElementById('dialog').style.display = 'block';
+
 }
 
 function buildUI(){
-    document.getElementById('title').innerHTML = pageTitle;
-    document.getElementById('url').innerHTML = "<a href='" + pageURL + "'>" + pageURL + "</a>";
+    document.getElementById('title').innerHTML = cleanHTML(pageTitle);
+    document.getElementById('url').innerHTML = "<a href='" + pageURL + "'>" + cleanHTML(pageURL) + "</a>";
 
     var titlePage = document.getElementsByClassName('title-page')[0];
 
@@ -108,6 +117,7 @@ function commentSetup(){
       var comment = new Comment();
       comment.set("title", pageTitle);
       comment.set("url", pageURL);
+      comment.set("customURL", pageURL.replace(/[^a-zA-Z 0-9]+/g,''));
       comment.set("username", Parse.User.current().get("username"));
       comment.set("content", input);
       comment.set("likes", 0);
@@ -130,10 +140,16 @@ function commentSetup(){
       buildDialog("Failed to Post Comment", "Please fill all fields.", "Try Again");
     }
   });
-
-
-
 }
+
+
+
+function cleanHTML(input){
+  var div = document.createElement("div");
+  div.innerHTML = input;
+  return div.textContent || div.innerText || "";
+}
+
 
 
 function loginBtnPressed(){
@@ -227,30 +243,65 @@ function loadComments(){
   showLoading();
 
   var Comment = Parse.Object.extend("Comment");
-  var query = new Parse.Query(Comment);
-  query.equalTo("title", pageTitle);
-  query.equalTo("url", pageURL);
+  
+  var query1 = new Parse.Query(Comment);
+  query1.equalTo("title", pageTitle);
 
-  query.find({
+  var query2 = new Parse.Query(Comment);
+  query2.equalTo("customURL", pageURL.replace(/[^a-zA-Z 0-9]+/g,''));
+
+  var mainQuery = Parse.Query.or(query1, query2);
+  mainQuery.find({
     success: function(results) {
-      var numComments = "<h5>" + results.length + " Comments</h5>";
 
+      var num = results.length;
       var comments = "";
 
       for (var i = 0; i < results.length; i++) {
+        var included = false;
+
         var object = results[i];
-        comments = comments + "<div class='comment'> <div class='username'>" + object.get("username") + "</div> <div class='content'>" + object.get("content") + "</div> <div class='like'>" + object.get("likes") + " <a id='likeBtn' data-id='" + object.id + "'><img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+        if(object.get("title") != pageTitle){
+          if(object.get("customURL") == pageURL.replace(/[^a-zA-Z 0-9]+/g,'')){
+            included = true;
+          } else {
+            num--;
+          }
+        } else {
+          if(object.get("customURL") == pageURL.replace(/[^a-zA-Z 0-9]+/g,'')){
+            included = true;
+          } else {
+            num--;
+          }
+        }
+
+        if(included){
+          var content = "";
+          var commentArray = object.get("content").split(" ");
+          for(var j=0; j<commentArray.length; j++){
+            if(validURL(commentArray[j])){
+              var ext = commentArray[j].substr(commentArray[j].length - 4).toLowerCase();
+              if(ext == ".jpg" || ext == ".png" || ext == "jpeg" || ext == ".gif"){
+                commentArray[j] = "<img src='" + commentArray[j] + "' style='width=100%; max-width:250px; display:block;'>";
+              }
+            }
+
+            content += commentArray[j] + " ";
+          }
+
+          comments = comments + "<div class='comment'> <div class='username'>" + cleanHTML(object.get("username")) + "</div> <div class='content'>" + content + "</div> <div class='like'>" + object.get("likes") + " <a id='likeBtn' data-id='" + object.id + "'><img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+        }
       }
 
-      document.getElementById("comments").innerHTML = numComments + comments;
-
+      var numComments = "<h5>" + num + " Comments</h5>";
+      document.getElementById("comments").innerHTML = numComments + "<div id='holder'>" + comments + "</div>";
       hideLoading();
     },
     error: function(error) {
-      console.log("Error: " + error.code + " " + error.message);
       hideLoading();
     }
   });
+
 }
 
 
@@ -264,7 +315,15 @@ function hideLoading(){
   document.getElementById('loading').style.display = 'none';
 }
 
-
+function validURL(str) {
+  var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+  '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|'+ // domain name
+  '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+  '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+  '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+  '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+  return pattern.test(str);
+}
 
 
 
