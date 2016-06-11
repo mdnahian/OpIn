@@ -1,5 +1,6 @@
 var pageURL = "";
 var pageTitle = "";
+var fullscreen = false;
 
 function getCurrentTabUrl(callback) {
   // Query filter to be passed to chrome.tabs.query - see
@@ -19,19 +20,38 @@ function getCurrentTabUrl(callback) {
 
     // A tab is a plain object that provides information about the tab.
     // See https://developer.chrome.com/extensions/tabs#type-Tab
-    var url = tab.url;
+    var url = getURLParameter('url', tab.url);
+    var title = getURLParameter('title', tab.url);
+    var page = getURLParameter('p', tab.url);
 
-    var title = tab.title;
+    if(url == null || title == null){
+      url = tab.url;
+      title = tab.title;
+
+      if(page != null){
+        fullscreen = true;
+      }
+    } else {
+      fullscreen = true;
+    }
+
 
     // tab.url is only available if the "activeTab" permission is declared.
     // If you want to see the URL of other tabs (e.g. after removing active:true
     // from |queryInfo|), then the "tabs" permission is required to see their
     // "url" properties.
-    console.assert(typeof url == 'string', 'tab.url should be a string');
+    // console.assert(typeof url == 'string', 'tab.url should be a string');
 
-    callback(url, title);
+    callback(url, title, page);
   });
 }
+
+
+
+function getURLParameter(name, url) {
+  return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(url) || [null, ''])[1].replace(/\+/g, '%20')) || null;
+}
+
 
 function closeAll() {
   for(var i=0; i<document.getElementsByClassName('input').length; i++){
@@ -40,6 +60,9 @@ function closeAll() {
 }
 
 function buildDialog(title, message, button) {
+
+  document.getElementById('dialog-box').innerHTML = "<div id='dtitle'>Something Went Wrong :(</div> <div id='dmessage'>This shouldn't be happening. Luckily, an error report has been sent. We will fix this issue immediately.</div> <hr> <a>&nbsp;</a> <a id='closeBtn'>Close</a>";
+
   document.getElementById('dtitle').innerHTML = title;
   document.getElementById('dmessage').innerHTML = message;
   document.getElementById('closeBtn').innerHTML = button;
@@ -97,9 +120,136 @@ function updateSessionState(){
 }
 
 
+function loadActivity(){
+  showLoading();
+  document.getElementById('comment-input').innerHTML = document.getElementById('welcome').innerHTML;
+
+  var Comment = Parse.Object.extend("Comment");
+
+  var query1 = new Parse.Query(Comment);
+  query1.equalTo("like", Parse.User.current().get("username"));
+
+  var query2 = new Parse.Query(Comment);
+  query2.equalTo("username", Parse.User.current().get("username"));
+
+  var mainQuery = Parse.Query.or(query1, query2);
+  mainQuery.descending("createdAt");
+  mainQuery.find({
+    success: function(results) {
+      if(results.length == 0) {
+        document.getElementById('comments').innerHTML = '<h5>You have not done anything yet.</h5>';
+        hideLoading();
+      } else {
+
+        var numComments = 0;
+        var content = '';
+
+        for(var i=0; i<results.length; i++){
+          var object = results[i];
+          
+          if(object.get("username") == Parse.User.current().get("username")){
+            content = content + parseComment(object);
+            numComments++;
+          }
+
+          
+          for(var j=0; j<object.get("like").length; j++){
+            if(object.get("like")[j] == Parse.User.current().get("username")){
+              content = content + parseLike(object);
+              break;
+            }
+          }
+          
+        }
+
+        document.getElementById('comments').innerHTML =  '<h4 style="margin:0; display:inline;">' + numComments + ' Comments</h4>' + content;
+        document.getElementById('comments').style.marginTop = "10px";
+        document.getElementById('comments').style.marginBottom = "10px";
+        document.getElementsByTagName('body')[0].style.overflowY = 'auto';
+      }
+
+      hideLoading();
+
+      loadLikes();
+
+    }
+  });
+
+
+}
+
+
 function commentSetup(){
-  document.getElementById('welcome').innerHTML = "Hi, " + Parse.User.current().get("username") + "! &nbsp; <small><a id='signoutBtn'>Sign Out</a></small>";
+  document.getElementById('welcome').innerHTML = "Hi, <a id='myaccountBtn' style='font-weight:bold; text-decoration:underline;'>" + Parse.User.current().get("username") + "</a>! &nbsp; <small><a id='repliesBtn'>Replies</a></small> &nbsp; <small><a id='signoutBtn' style='float:right;'>Sign Out</a></small>";
   
+  /*
+    Replies
+  */
+  // document.getElementById('repliesBtn').addEventListener('click', function(){
+  //   showLoading();
+
+  //   document.getElementById('dialog-box').innerHTML = "";
+
+  //   var Comment = Parse.Object.extend("Comment");
+  //   var query = new Parse.Query(Comment);
+  //   query.equalTo("replyto", Parse.User.current().get("username"));
+  //   query.descending("createdAt");
+
+  //   query.find({
+  //     success: function(results) {
+  //       if(results.length == 0) {
+  //         document.getElementById('dialog-box').innerHTML = '<h5>There are no replies yet.</h5>';
+  //         hideLoading();
+  //       } else {
+
+  //         var content =  '<h4 style="margin:0; margin-bottom:5px;">' + results.length + ' Replies</h4> <div id="comments" class="comments" style="max-height:350px; overflow-y:auto;">';
+
+  //         for(var i=0; i<results.length; i++){
+  //           var object = results[i];
+  //           content = content + parseComment(object);
+  //         }
+
+  //         document.getElementById('dialog-box').innerHTML = content + "</div>";
+
+  //       }
+
+  //       document.getElementById('dialog-box').innerHTML = '<a id="closeBtn" style="font-size:20px;">X</a><br>' + document.getElementById('dialog-box').innerHTML;
+        
+  //       document.getElementById('closeBtn').addEventListener('click', function(){
+  //         document.getElementById('dialog').style.display = 'none';
+  //         loadComments();
+  //       });
+
+  //       document.getElementById('dialog').style.display = 'block';
+
+  //       hideLoading();
+
+  //       loadLikes();
+
+  //     }
+  //   });
+  // });
+
+
+
+
+
+
+
+  /*
+    My Activity
+  */
+  document.getElementById('myaccountBtn').addEventListener('click', function(){
+    chrome.tabs.create({url: chrome.extension.getURL('comments.html?p=myactivity')});
+
+    // showLoading();
+
+    // document.getElementById('dialog-box').innerHTML = "";
+
+    
+
+  });
+
   document.getElementById('signoutBtn').addEventListener('click', function(){
     showLoading();
     Parse.User.logOut().then(() => {
@@ -120,7 +270,17 @@ function commentSetup(){
       comment.set("customURL", pageURL.replace(/[^a-zA-Z 0-9]+/g,''));
       comment.set("username", Parse.User.current().get("username"));
       comment.set("content", input);
-      comment.set("likes", 0);
+      comment.set("like", []);
+
+      var commentArray = input.split(" ");
+      for(var j=0; j<commentArray.length; j++){
+        if(commentArray[j].charAt(0) == "@"){
+          var includeUser = commentArray[j].replace("@", "").replace(".", "").replace(",", "").replace("!", "").replace("?");
+          comment.set("replyto", includeUser);
+          break;
+        }
+      }
+
 
       comment.save(null, {
         success: function(comment) {
@@ -232,11 +392,30 @@ function signupSetup(){
 
 function resetSetup(){
   document.getElementById('resetBtn').addEventListener('click', function() {
-      
+    showLoading();
+
+      var email = document.getElementById("email3").value;
+
+      if(email != ""){
+
+        var query = new Parse.Query(Parse.User);
+        query.equalTo("email", email);
+        query.find({
+          success: function(user) {
+            buildDialog("Sent Password Reset Link", "A password reset link has been emailed to "+cleanHTML(email)+".", "Login");
+            loginBtnPressed();
+          }, 
+          error:  function(error) {
+            buildDialog("Failed to Send Reset Link", "The email "+cleanHTML(email)+" is not in our records.", "Try Again");
+          }
+        });
+      } else {
+        hideLoading();
+        buildDialog("Failed to Send Reset Link", "Please fill all fields.", "Try Again");
+      }
+
   });
 }
-
-
 
 
 function loadComments(){
@@ -251,6 +430,7 @@ function loadComments(){
   query2.equalTo("customURL", pageURL.replace(/[^a-zA-Z 0-9]+/g,''));
 
   var mainQuery = Parse.Query.or(query1, query2);
+  mainQuery.descending("like");
   mainQuery.find({
     success: function(results) {
 
@@ -276,25 +456,26 @@ function loadComments(){
         }
 
         if(included){
-          var content = "";
-          var commentArray = object.get("content").split(" ");
-          for(var j=0; j<commentArray.length; j++){
-            if(validURL(commentArray[j])){
-              var ext = commentArray[j].substr(commentArray[j].length - 4).toLowerCase();
-              if(ext == ".jpg" || ext == ".png" || ext == "jpeg" || ext == ".gif"){
-                commentArray[j] = "<img src='" + commentArray[j] + "' style='width=100%; max-width:250px; display:block;'>";
-              }
-            }
-
-            content += commentArray[j] + " ";
-          }
-
-          comments = comments + "<div class='comment'> <div class='username'>" + cleanHTML(object.get("username")) + "</div> <div class='content'>" + content + "</div> <div class='like'>" + object.get("likes") + " <a id='likeBtn' data-id='" + object.id + "'><img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+          comments = comments + parseComment(object);
         }
       }
 
-      var numComments = "<h5>" + num + " Comments</h5>";
-      document.getElementById("comments").innerHTML = numComments + "<div id='holder'>" + comments + "</div>";
+      var numComments = "<h4 style='display:inline;'>" + num + " Comments</h4> <img id='openBtn' src='open.png' alt='open in new tab' style='float:right; height:20px; margin-top:1px; cursor:pointer;'> <br>";
+      document.getElementById('comments').style.marginTop = "10px";
+      document.getElementById("comments").innerHTML = numComments + "<div id='holder' style='margin-top:10px;'>" + comments + "</div>";
+
+      if(fullscreen) {
+        document.getElementById('holder').style.maxHeight = 'none';
+        document.getElementsByTagName('body')[0].style.overflowY = 'auto';
+        document.getElementById('openBtn').style.display = "none";
+      }
+
+      document.getElementById('openBtn').addEventListener('click', function(){
+        chrome.tabs.create({url: chrome.extension.getURL('comments.html?url='+pageURL+'&title='+pageTitle)});
+      });
+
+      loadLikes();
+
       hideLoading();
     },
     error: function(error) {
@@ -303,6 +484,99 @@ function loadComments(){
   });
 
 }
+
+
+
+
+
+
+function loadLikes() {
+  for(var k=0; k<document.getElementsByClassName('likeBtn').length; k++){
+
+        document.getElementsByClassName('likeBtn')[k].addEventListener('click', function(){
+          showLoading();
+
+          var currentUser = Parse.User.current();
+          if(currentUser){
+            var objectId = this.getAttribute("data-id");
+            if(objectId != ""){
+
+
+              var Comment = Parse.Object.extend("Comment");
+              var query = new Parse.Query(Comment);
+              query.get(objectId, {
+                success: function(comment) {
+                  if(comment.get("username") != currentUser.get("username")){
+                    comment.addUnique("like", currentUser.get("username"));
+                    comment.save();
+                    hideLoading();
+                    loadComments();
+                  } else {
+                    hideLoading();
+                  }
+                },
+                error: function(object, error) {
+                  hideLoading();
+                  buildDialog("Failed to Like Comment", error.message, "Close");
+                }
+              });
+              
+
+            } else {
+              hideLoading();
+            }
+          } else {
+            hideLoading();
+            buildDialog("Failed to Like Comment", "You are not logged in. Please login to like and post comments.", "Close");
+          }
+          
+        });
+      
+  }
+}
+
+
+
+
+
+
+
+
+function parseComment(object){
+  var content = "";
+  var commentArray = object.get("content").split(" ");
+  for(var j=0; j<commentArray.length; j++){
+    if(validURL(commentArray[j])){
+      var ext = commentArray[j].substr(commentArray[j].length - 4).toLowerCase();
+      if(ext == ".jpg" || ext == ".png" || ext == "jpeg" || ext == ".gif"){
+        commentArray[j] = "<img src='" + commentArray[j] + "' style='width=100%; max-width:250px; display:block;'>";
+      }
+    } else {
+      if(commentArray[j].charAt(0) == "@"){
+        var includeUser = commentArray[j].replace("@", "").replace(".", "").replace(",", "").replace("!", "").replace("?");
+        commentArray[j] = "<a id='user' data-user='"+object.get("username")+"' style='font-weight:500; color:#999999; cursor:default;'>" + commentArray[j] + "</a>";
+      }
+    }
+
+    content += commentArray[j] + " ";
+  }
+
+  var likes = 0;
+  if(object.get("like") != null){
+    likes = object.get("like").length;
+  }
+
+  return "<div class='comment'> <div class='username'>" + cleanHTML(object.get("username")) + "</div> <div class='content'>" + content + "</div> <div class='like'> <a id='likeBtn' class='likeBtn' data-id='" + object.id + "'>" + likes + " <img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+}
+
+
+
+
+function parseLike(object) {
+    return "<div class='comment'> You liked <div class='username' style='display:inline; color:#999999;'>@" + cleanHTML(object.get("username")) + "</div>'s comment \"" + cleanHTML(object.get("content")) + "\"</div>";
+}
+
+
 
 
 
@@ -325,11 +599,22 @@ function validURL(str) {
   return pattern.test(str);
 }
 
+  
+function onCreate(){
+  buildUI();
 
+  loginSetup();
+
+  signupSetup();
+
+  resetSetup();
+
+  updateSessionState();
+}
 
 
 document.addEventListener('DOMContentLoaded', function() {
-  getCurrentTabUrl(function(url, title) {
+  getCurrentTabUrl(function(url, title, page) {
     
     /*
       Configure Parse
@@ -340,19 +625,20 @@ document.addEventListener('DOMContentLoaded', function() {
     pageURL = url;
     pageTitle = title;
 
-    buildUI();
 
-    loginSetup();
-
-    signupSetup();
-
-    resetSetup();
-
-    updateSessionState();
-
-    loadComments();
-
-
+    if(page == "myactivity" && fullscreen){
+      pageTitle = "My Activity";
+      onCreate();
+      loadActivity();
+    } else if(page == "replies" && fullscreen) {
+      pageTitle = "My Replies";
+      onCreate();
+      loadReplies();
+    } else {
+      onCreate();
+      loadComments();
+    }
+  
   });
 });
 
