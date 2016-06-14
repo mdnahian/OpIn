@@ -3,23 +3,16 @@ var pageTitle = "";
 var fullscreen = false;
 
 function getCurrentTabUrl(callback) {
-  // Query filter to be passed to chrome.tabs.query - see
-  // https://developer.chrome.com/extensions/tabs#method-query
+  
   var queryInfo = {
     active: true,
     currentWindow: true
   };
 
   chrome.tabs.query(queryInfo, function(tabs) {
-    // chrome.tabs.query invokes the callback with a list of tabs that match the
-    // query. When the popup is opened, there is certainly a window and at least
-    // one tab, so we can safely assume that |tabs| is a non-empty array.
-    // A window can only have one active tab at a time, so the array consists of
-    // exactly one tab.
+  
     var tab = tabs[0];
 
-    // A tab is a plain object that provides information about the tab.
-    // See https://developer.chrome.com/extensions/tabs#type-Tab
     var url = getURLParameter('url', tab.url);
     var title = getURLParameter('title', tab.url);
     var page = getURLParameter('p', tab.url);
@@ -34,13 +27,6 @@ function getCurrentTabUrl(callback) {
     } else {
       fullscreen = true;
     }
-
-
-    // tab.url is only available if the "activeTab" permission is declared.
-    // If you want to see the URL of other tabs (e.g. after removing active:true
-    // from |queryInfo|), then the "tabs" permission is required to see their
-    // "url" properties.
-    // console.assert(typeof url == 'string', 'tab.url should be a string');
 
     callback(url, title, page);
   });
@@ -120,9 +106,56 @@ function updateSessionState(){
 }
 
 
+
+function loadReplies(){
+  showLoading()
+  document.getElementById('comment-input').innerHTML = document.getElementById('welcome').innerHTML;
+
+  loadUIBtns();
+
+  var Comment = Parse.Object.extend("Comment");
+  var query = new Parse.Query(Comment);
+  query.equalTo("replyto", Parse.User.current().get("username"));
+  query.descending("createdAt");
+
+  query.find({
+    success: function(results) {
+      if(results.length == 0) {
+        document.getElementById('comments').innerHTML = '<h5>There are no replies yet.</h5>';
+        hideLoading();
+      } else {
+
+        var content =  '<h4 style="margin:0; margin-bottom:10px;">' + results.length + ' Replies</h4> <div id="comments" class="comments" style="max-height:350px; overflow-y:auto;">';
+
+        for(var i=0; i<results.length; i++){
+          var object = results[i];
+          content = content + parseComment(object);
+        }
+
+        document.getElementById('comments').innerHTML = content + "</div>";
+
+        document.getElementById('comments').style.marginTop = "10px";
+        document.getElementById('comments').style.marginBottom = "10px";
+        document.getElementsByTagName('body')[0].style.overflowY = 'auto';
+
+      }
+
+      hideLoading();
+
+      loadLikes();
+
+    }
+  });
+
+}
+
+
+
 function loadActivity(){
   showLoading();
   document.getElementById('comment-input').innerHTML = document.getElementById('welcome').innerHTML;
+
+  loadUIBtns();
 
   var Comment = Parse.Object.extend("Comment");
 
@@ -162,7 +195,7 @@ function loadActivity(){
           
         }
 
-        document.getElementById('comments').innerHTML =  '<h4 style="margin:0; display:inline;">' + numComments + ' Comments</h4>' + content;
+        document.getElementById('comments').innerHTML =  '<h4 style="margin:0; margin-bottom:10px;">' + numComments + ' Comments</h4>' + content;
         document.getElementById('comments').style.marginTop = "10px";
         document.getElementById('comments').style.marginBottom = "10px";
         document.getElementsByTagName('body')[0].style.overflowY = 'auto';
@@ -182,81 +215,7 @@ function loadActivity(){
 function commentSetup(){
   document.getElementById('welcome').innerHTML = "Hi, <a id='myaccountBtn' style='font-weight:bold; text-decoration:underline;'>" + Parse.User.current().get("username") + "</a>! &nbsp; <small><a id='repliesBtn'>Replies</a></small> &nbsp; <small><a id='signoutBtn' style='float:right;'>Sign Out</a></small>";
   
-  /*
-    Replies
-  */
-  // document.getElementById('repliesBtn').addEventListener('click', function(){
-  //   showLoading();
-
-  //   document.getElementById('dialog-box').innerHTML = "";
-
-  //   var Comment = Parse.Object.extend("Comment");
-  //   var query = new Parse.Query(Comment);
-  //   query.equalTo("replyto", Parse.User.current().get("username"));
-  //   query.descending("createdAt");
-
-  //   query.find({
-  //     success: function(results) {
-  //       if(results.length == 0) {
-  //         document.getElementById('dialog-box').innerHTML = '<h5>There are no replies yet.</h5>';
-  //         hideLoading();
-  //       } else {
-
-  //         var content =  '<h4 style="margin:0; margin-bottom:5px;">' + results.length + ' Replies</h4> <div id="comments" class="comments" style="max-height:350px; overflow-y:auto;">';
-
-  //         for(var i=0; i<results.length; i++){
-  //           var object = results[i];
-  //           content = content + parseComment(object);
-  //         }
-
-  //         document.getElementById('dialog-box').innerHTML = content + "</div>";
-
-  //       }
-
-  //       document.getElementById('dialog-box').innerHTML = '<a id="closeBtn" style="font-size:20px;">X</a><br>' + document.getElementById('dialog-box').innerHTML;
-        
-  //       document.getElementById('closeBtn').addEventListener('click', function(){
-  //         document.getElementById('dialog').style.display = 'none';
-  //         loadComments();
-  //       });
-
-  //       document.getElementById('dialog').style.display = 'block';
-
-  //       hideLoading();
-
-  //       loadLikes();
-
-  //     }
-  //   });
-  // });
-
-
-
-
-
-
-
-  /*
-    My Activity
-  */
-  document.getElementById('myaccountBtn').addEventListener('click', function(){
-    chrome.tabs.create({url: chrome.extension.getURL('comments.html?p=myactivity')});
-
-    // showLoading();
-
-    // document.getElementById('dialog-box').innerHTML = "";
-
-    
-
-  });
-
-  document.getElementById('signoutBtn').addEventListener('click', function(){
-    showLoading();
-    Parse.User.logOut().then(() => {
-      var currentUser = Parse.User.current();
-      updateSessionState();
-    });
-  });
+  loadUIBtns();
 
   document.getElementById('postBtn').addEventListener('click', function(){
     showLoading();
@@ -482,7 +441,6 @@ function loadComments(){
       hideLoading();
     }
   });
-
 }
 
 
@@ -500,7 +458,6 @@ function loadLikes() {
           if(currentUser){
             var objectId = this.getAttribute("data-id");
             if(objectId != ""){
-
 
               var Comment = Parse.Object.extend("Comment");
               var query = new Parse.Query(Comment);
@@ -536,7 +493,34 @@ function loadLikes() {
 }
 
 
+function loadUIBtns(){
 
+  /*
+    Replies
+  */
+  document.getElementById('repliesBtn').addEventListener('click', function(){
+    chrome.tabs.create({url: chrome.extension.getURL('comments.html?p=replies')});
+  });
+
+  /*
+    My Activity
+  */
+  document.getElementById('myaccountBtn').addEventListener('click', function(){
+    chrome.tabs.create({url: chrome.extension.getURL('comments.html?p=myactivity')});
+  });
+
+  /*
+    Signout
+  */
+  document.getElementById('signoutBtn').addEventListener('click', function(){
+    showLoading();
+    Parse.User.logOut().then(() => {
+      var currentUser = Parse.User.current();
+      updateSessionState();
+    });
+  });
+
+}
 
 
 
