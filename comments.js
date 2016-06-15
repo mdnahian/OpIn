@@ -142,6 +142,8 @@ function loadReplies(){
 
       hideLoading();
 
+      loadLinks();
+
       loadLikes();
 
     }
@@ -202,6 +204,8 @@ function loadActivity(){
       }
 
       hideLoading();
+
+      loadLinks();
 
       loadLikes();
 
@@ -433,6 +437,8 @@ function loadComments(){
         chrome.tabs.create({url: chrome.extension.getURL('comments.html?url='+pageURL+'&title='+pageTitle)});
       });
 
+      loadLinks();
+
       loadLikes();
 
       hideLoading();
@@ -445,6 +451,15 @@ function loadComments(){
 
 
 
+function loadLinks() {
+  for(var k=0; k<document.getElementsByClassName("content").length; k++) {
+    document.getElementsByClassName("content")[k].addEventListener("click", function() {
+
+      chrome.tabs.create({url: this.getAttribute("data-url")});
+
+    });
+  }
+}
 
 
 
@@ -550,14 +565,14 @@ function parseComment(object){
     likes = object.get("like").length;
   }
 
-  return "<div class='comment'> <div class='username'>" + cleanHTML(object.get("username")) + "</div> <div class='content'>" + content + "</div> <div class='like'> <a id='likeBtn' class='likeBtn' data-id='" + object.id + "'>" + likes + " <img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
+  return "<div class='comment'> <div class='username'>" + cleanHTML(object.get("username")) + "</div> <div class='content' data-url='"+object.get("url")+"' style='cursor:pointer;'>" + content + " </div> <div class='like'> <a id='likeBtn' class='likeBtn' data-id='" + object.id + "'>" + likes + " <img src='like.png' alt='like comment'></a></div> <div class='datetime'>" + object.createdAt + "</div> </div>";
 }
 
 
 
 
 function parseLike(object) {
-    return "<div class='comment'> You liked <div class='username' style='display:inline; color:#999999;'>@" + cleanHTML(object.get("username")) + "</div>'s comment \"" + cleanHTML(object.get("content")) + "\"</div>";
+    return "<div class='comment'> <div class='content' data-url='"+object.get("url")+"' style='cursor:pointer;'> You liked <div class='username' style='display:inline; color:#999999;'>@" + cleanHTML(object.get("username")) + "</div>'s comment \"" + cleanHTML(object.get("content")) + "\"</div> </div>";
 }
 
 
