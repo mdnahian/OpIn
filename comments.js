@@ -619,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
       Configure Parse
     */
     Parse.initialize("opin_chrome_ext");
-    Parse.serverURL = 'http://parseserver-8qx6b-env.us-west-2.elasticbeanstalk.com/parse'
+    Parse.serverURL = 'http://opin.us-east-1.elasticbeanstalk.com/parse'
 
     pageURL = url;
     pageTitle = title;
